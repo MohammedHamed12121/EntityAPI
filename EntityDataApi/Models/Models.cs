@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace EntityDataApi.Models
@@ -11,8 +12,11 @@ namespace EntityDataApi.Models
         public bool Deceased { get; set; }
         public string? Gender { get; set; }
 
+        [JsonIgnore]
         public List<Name>? Names { get; set; }
+        [JsonIgnore]
         public List<Address>? Addresses { get; set; }
+        [JsonIgnore]
         public List<Date>? Dates { get; set; }
     }
 
@@ -22,9 +26,9 @@ namespace EntityDataApi.Models
         public bool Deceased { get; set; }
         public string? Gender { get; set; }
 
-        public List<Name>? Names { get; set; }
-        public List<Address>? Addresses { get; set; }
-        public List<Date>? Dates { get; set; }
+        public virtual List<Name>? Names { get; set; }
+        public virtual List<Address>? Addresses { get; set; }
+        public virtual List<Date>? Dates { get; set; }
     }
 
     public class Address
@@ -35,7 +39,8 @@ namespace EntityDataApi.Models
         public string? Country { get; set; }
 
         public string? EntityId { get; set; }
-        public Entity? Entity { get; set; }
+        [JsonIgnore]
+        public virtual Entity? Entity { get; set; }
     }
 
     public class Date
@@ -45,7 +50,8 @@ namespace EntityDataApi.Models
         public DateTime? DateValue { get; set; }
 
         public string? EntityId { get; set; }
-        public Entity? Entity { get; set; }
+        [JsonIgnore]
+        public virtual Entity? Entity { get; set; }
     }
 
     public class Name
@@ -55,6 +61,7 @@ namespace EntityDataApi.Models
         public string? MiddleName { get; set; }
         public string? Surname { get; set; }
         public string? EntityId { get; set; }
-        public Entity? Entity { get; set; }
+        [JsonIgnore]
+        public virtual Entity? Entity { get; set; }
     }
 }

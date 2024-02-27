@@ -33,7 +33,7 @@ namespace EntityDataApi.Data.Migrations
                     AddressLine = table.Column<string>(type: "TEXT", nullable: true),
                     City = table.Column<string>(type: "TEXT", nullable: true),
                     Country = table.Column<string>(type: "TEXT", nullable: true),
-                    EntityId = table.Column<string>(type: "TEXT", nullable: true)
+                    EntityId = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -42,7 +42,8 @@ namespace EntityDataApi.Data.Migrations
                         name: "FK_Addresses_Entities_EntityId",
                         column: x => x.EntityId,
                         principalTable: "Entities",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -53,7 +54,7 @@ namespace EntityDataApi.Data.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     DateType = table.Column<string>(type: "TEXT", nullable: true),
                     DateValue = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    EntityId = table.Column<string>(type: "TEXT", nullable: true)
+                    EntityId = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -62,7 +63,8 @@ namespace EntityDataApi.Data.Migrations
                         name: "FK_Dates_Entities_EntityId",
                         column: x => x.EntityId,
                         principalTable: "Entities",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -74,7 +76,7 @@ namespace EntityDataApi.Data.Migrations
                     FirstName = table.Column<string>(type: "TEXT", nullable: true),
                     MiddleName = table.Column<string>(type: "TEXT", nullable: true),
                     Surname = table.Column<string>(type: "TEXT", nullable: true),
-                    EntityId = table.Column<string>(type: "TEXT", nullable: true)
+                    EntityId = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -83,7 +85,8 @@ namespace EntityDataApi.Data.Migrations
                         name: "FK_Names_Entities_EntityId",
                         column: x => x.EntityId,
                         principalTable: "Entities",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(

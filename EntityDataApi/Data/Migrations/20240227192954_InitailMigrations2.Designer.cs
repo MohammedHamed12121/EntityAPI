@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EntityDataApi.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20240227180918_InitailMigrations")]
-    partial class InitailMigrations
+    [Migration("20240227192954_InitailMigrations2")]
+    partial class InitailMigrations2
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -36,6 +36,7 @@ namespace EntityDataApi.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("EntityId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -58,6 +59,7 @@ namespace EntityDataApi.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("EntityId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -90,6 +92,7 @@ namespace EntityDataApi.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("EntityId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FirstName")
@@ -112,7 +115,9 @@ namespace EntityDataApi.Data.Migrations
                 {
                     b.HasOne("EntityDataApi.Models.Entity", "Entity")
                         .WithMany("Addresses")
-                        .HasForeignKey("EntityId");
+                        .HasForeignKey("EntityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Entity");
                 });
@@ -121,7 +126,9 @@ namespace EntityDataApi.Data.Migrations
                 {
                     b.HasOne("EntityDataApi.Models.Entity", "Entity")
                         .WithMany("Dates")
-                        .HasForeignKey("EntityId");
+                        .HasForeignKey("EntityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Entity");
                 });
@@ -130,7 +137,9 @@ namespace EntityDataApi.Data.Migrations
                 {
                     b.HasOne("EntityDataApi.Models.Entity", "Entity")
                         .WithMany("Names")
-                        .HasForeignKey("EntityId");
+                        .HasForeignKey("EntityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Entity");
                 });
