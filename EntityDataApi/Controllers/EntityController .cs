@@ -1,10 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using EntityDataApi.Data;
 using EntityDataApi.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -20,14 +14,16 @@ namespace EntityDataApi.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<EntityController> _logger;
         private const int MaxRetryAttempts = 3;
-        private const int DelayBetweenRetriesMilliseconds = 1000;
+        private const int DelayBetweenRetriesMilliseconds = 10000;
+        private const double BackoffMultiplier = 2.0; // For exponential backoff
+
 
         public EntityController(ApplicationDbContext context, ILogger<EntityController> logger)
         {
             _context = context;
             _logger = logger;
         }
-
+        #region GetAll
         [HttpGet]
         // TODO: move those to an object
         public ActionResult<IEnumerable<Entity>> GetEntities(
@@ -50,7 +46,7 @@ namespace EntityDataApi.Controllers
             // search filter if search is provided
             if (!string.IsNullOrEmpty(search))
             {
-                
+
                 query = query.Where(e => e.Id.ToString() == search ||
                                           e.Names.Any(n => n.FirstName.Contains(search) || n.Surname.Contains(search)) ||
                                           e.Addresses.Any(a => a.Country.Contains(search) || a.AddressLine.Contains(search)));
@@ -110,7 +106,9 @@ namespace EntityDataApi.Controllers
 
             return Ok(query);
         }
+        #endregion
 
+        #region GetById
         [HttpGet("{id}")]
         public ActionResult<Entity> GetEntity(int id)
         {
@@ -125,7 +123,9 @@ namespace EntityDataApi.Controllers
             }
             return Ok(entity);
         }
+        #endregion
 
+        #region  Post
         [HttpPost]
         public async Task<ActionResult<Entity>> CreateEntity(Entity entity)
         {
@@ -142,8 +142,9 @@ namespace EntityDataApi.Controllers
                 catch (DbUpdateException ex) when (IsTransientError(ex) && retryCount < MaxRetryAttempts)
                 {
                     retryCount++;
-                    _logger.LogWarning($"Transient error occurred while saving entity. Retrying attempt {retryCount} after {DelayBetweenRetriesMilliseconds} milliseconds.");
-                    await Task.Delay(DelayBetweenRetriesMilliseconds);
+                    TimeSpan delay = CalculateBackoffDelay(retryCount);
+                    _logger.LogWarning($"Transient error occurred while saving entity. Retrying attempt {retryCount} after {delay.TotalMilliseconds} milliseconds.");
+                    await Task.Delay(delay);
                 }
             }
 
@@ -151,12 +152,23 @@ namespace EntityDataApi.Controllers
             return StatusCode(500, "Failed to save entity after retry attempts.");
         }
 
-        private bool IsTransientError(DbUpdateException ex)
+        private TimeSpan CalculateBackoffDelay(int retryCount)
         {
-            // Check if the exception is a transient error
-            return ex.InnerException is SqlException sqlException && (sqlException.Number == -2 || sqlException.Number == 1205);
+            // Calculate exponential backoff delay with jitter
+            Random random = new Random();
+            int jitter = random.Next(0, 100); 
+            double exponentialDelay = Math.Min(DelayBetweenRetriesMilliseconds, Math.Pow(BackoffMultiplier, retryCount) * 1000);
+            return TimeSpan.FromMilliseconds(exponentialDelay + jitter);
         }
 
+        private bool IsTransientError(DbUpdateException ex)
+        {
+            // Check if the exception is a transient error that can be retried
+            return ex.InnerException is SqlException sqlException && (sqlException.Number == -2 || sqlException.Number == 1205);
+        }
+        #endregion
+
+        #region put
         [HttpPut("{id}")]
         public IActionResult PutEntity(int id, Entity entity)
         {
@@ -170,7 +182,9 @@ namespace EntityDataApi.Controllers
 
             return NoContent();
         }
+        #endregion
 
+        #region Delete
         [HttpDelete("{id}")]
         public IActionResult DeleteEntity(string id)
         {
@@ -185,5 +199,6 @@ namespace EntityDataApi.Controllers
 
             return NoContent();
         }
+        #endregion
     }
 }
