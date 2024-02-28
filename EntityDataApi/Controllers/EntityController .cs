@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -33,14 +34,20 @@ namespace EntityDataApi.Controllers
                                                     [FromQuery] string? search = null,
                                                     [FromQuery] string? gender = null,
                                                     [FromQuery] string? country = null,
-                                                    [FromQuery] string? addressLine = null)
+                                                    [FromQuery] string? addressLine = null,
+                                                    [FromQuery] DateTime? startDate = null,
+                                                    [FromQuery] DateTime? endDate = null,
+                                                    [FromQuery] string sortBy = "Id",
+                                                    [FromQuery] string sortDirection = "asc",
+                                                    [FromQuery] int page = 1,
+                                                    [FromQuery] int pageSize = 10)
         {
             IQueryable<Entity> query = _context.Entities
                                                 .Include(e => e.Addresses)
                                                 .Include(e => e.Names)
                                                 .Include(e => e.Dates);
 
-            // Apply search filter if search provided
+            // search filter if search is provided
             if (!string.IsNullOrEmpty(search))
             {
                 
@@ -49,24 +56,59 @@ namespace EntityDataApi.Controllers
                                           e.Addresses.Any(a => a.Country.Contains(search) || a.AddressLine.Contains(search)));
             }
 
-            // Apply gender filter if gender is provided
+            // gender filter if gender is provided
             if (!string.IsNullOrEmpty(gender))
             {
                 query = query.Where(e => e.Gender == gender);
             }
 
-            // Apply address country filter if country provided
+            // address country filter if country is provided
             if (!string.IsNullOrEmpty(country))
             {
                 query = query.Where(e => e.Addresses.Any(a => a.Country.Contains(country)));
             }
 
-            // Apply address line filter if addressLine provided
+            // address line filter if addressLine is provided
             if (!string.IsNullOrEmpty(addressLine))
             {
                 query = query.Where(e => e.Addresses.Any(a => a.AddressLine.Contains(addressLine)));
             }
-            return Ok(query.ToList());
+            if (startDate != null && endDate != null)
+            {
+                DateTime start = startDate.Value.Date;
+                DateTime end = endDate.Value.Date
+                                            .AddDays(1)
+                                            .AddTicks(-1); // Set the end date to 23:59:59.999 because end data is inclusive
+
+                query = query.Where(e => e.Dates.Any(d => d.DateValue >= start && d.DateValue <= end));
+            }
+
+            // sorting
+            var propertyInfo = typeof(Entity).GetProperty(sortBy, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+            if (propertyInfo != null)
+            {
+                query = sortDirection.ToLower() == "desc" ?
+                    query.OrderByDescending(x => EF.Property<object>(x, sortBy)) :
+                    query.OrderBy(x => EF.Property<object>(x, sortBy));
+            }
+
+
+            // Add pagination and paganition meta date to the response
+            var totalCount = query.Count();
+            var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+            var entities = query.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            var metadata = new
+            {
+                TotalCount = totalCount,
+                PageSize = pageSize,
+                CurrentPage = page,
+                TotalPages = totalPages
+            };
+
+            Response.Headers.Add("X-Pagination", Newtonsoft.Json.JsonConvert.SerializeObject(metadata));
+
+            return Ok(query);
         }
 
         [HttpGet("{id}")]
