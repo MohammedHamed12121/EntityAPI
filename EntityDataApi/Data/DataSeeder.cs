@@ -28,7 +28,6 @@ namespace EntityDataApi.Data
             {
                 new Entity
                 {
-                    Id = "1",
                     Deceased = false,
                     Gender = "Male",
                     Addresses = new List<Address>
@@ -48,7 +47,6 @@ namespace EntityDataApi.Data
                 },
                 new Entity
                 {
-                    Id = "2",
                     Deceased = false,
                     Gender = "Female",
                     Addresses = new List<Address>
@@ -68,7 +66,6 @@ namespace EntityDataApi.Data
                 },
                 new Entity
                 {
-                    Id = "3",
                     Deceased = false,
                     Gender = "Male",
                     Addresses = new List<Address>
@@ -88,7 +85,6 @@ namespace EntityDataApi.Data
                 },
                 new Entity
                 {
-                    Id = "4",
                     Deceased = true,
                     Gender = "Female",
                     Addresses = new List<Address>

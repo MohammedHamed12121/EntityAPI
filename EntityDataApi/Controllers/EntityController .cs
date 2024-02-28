@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using EntityDataApi.Data;
 using EntityDataApi.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace EntityDataApi.Controllers
@@ -16,10 +17,14 @@ namespace EntityDataApi.Controllers
     public class EntityController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<EntityController> _logger;
+        private const int MaxRetryAttempts = 3;
+        private const int DelayBetweenRetriesMilliseconds = 1000;
 
-        public EntityController(ApplicationDbContext context)
+        public EntityController(ApplicationDbContext context, ILogger<EntityController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -31,14 +36,15 @@ namespace EntityDataApi.Controllers
                                                     [FromQuery] string? addressLine = null)
         {
             IQueryable<Entity> query = _context.Entities
-                                                .Include(e => e.Addresses) 
+                                                .Include(e => e.Addresses)
                                                 .Include(e => e.Names)
                                                 .Include(e => e.Dates);
 
             // Apply search filter if search provided
             if (!string.IsNullOrEmpty(search))
             {
-                query = query.Where(e => e.Id.Contains(search) ||
+                
+                query = query.Where(e => e.Id.ToString() == search ||
                                           e.Names.Any(n => n.FirstName.Contains(search) || n.Surname.Contains(search)) ||
                                           e.Addresses.Any(a => a.Country.Contains(search) || a.AddressLine.Contains(search)));
             }
@@ -64,7 +70,7 @@ namespace EntityDataApi.Controllers
         }
 
         [HttpGet("{id}")]
-        public ActionResult<Entity> GetEntity(string id)
+        public ActionResult<Entity> GetEntity(int id)
         {
             var entity = _context.Entities
                 .Include(e => e.Addresses)
@@ -79,15 +85,38 @@ namespace EntityDataApi.Controllers
         }
 
         [HttpPost]
-        public ActionResult<Entity> PostEntity(Entity entity)
+        public async Task<ActionResult<Entity>> CreateEntity(Entity entity)
         {
-            _context.Entities.Add(entity);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetEntity), new { id = entity.Id }, entity);
+            int retryCount = 0;
+
+            while (retryCount < MaxRetryAttempts)
+            {
+                try
+                {
+                    _context.Entities.Add(entity);
+                    await _context.SaveChangesAsync();
+                    return CreatedAtAction(nameof(GetEntity), new { id = entity.Id }, entity);
+                }
+                catch (DbUpdateException ex) when (IsTransientError(ex) && retryCount < MaxRetryAttempts)
+                {
+                    retryCount++;
+                    _logger.LogWarning($"Transient error occurred while saving entity. Retrying attempt {retryCount} after {DelayBetweenRetriesMilliseconds} milliseconds.");
+                    await Task.Delay(DelayBetweenRetriesMilliseconds);
+                }
+            }
+
+            _logger.LogError($"Failed to save entity after {MaxRetryAttempts} retry attempts.");
+            return StatusCode(500, "Failed to save entity after retry attempts.");
+        }
+
+        private bool IsTransientError(DbUpdateException ex)
+        {
+            // Check if the exception is a transient error
+            return ex.InnerException is SqlException sqlException && (sqlException.Number == -2 || sqlException.Number == 1205);
         }
 
         [HttpPut("{id}")]
-        public IActionResult PutEntity(string id, Entity entity)
+        public IActionResult PutEntity(int id, Entity entity)
         {
             if (id != entity.Id)
             {
