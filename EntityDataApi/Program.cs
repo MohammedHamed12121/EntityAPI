@@ -1,4 +1,7 @@
 using EntityDataApi.Data;
+using EntityDataApi.Helpers;
+using EntityDataApi.IRepositories;
+using EntityDataApi.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +13,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddScoped<IEntitiesRepository, EntitiesRepository>();
+builder.Services.AddScoped<RetryHelper>();
+
 // Sqlite
 // builder.Services.AddDbContext<ApplicationDbContext>(options =>
 //     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -17,6 +23,9 @@ builder.Services.AddSwaggerGen();
 // SqlServer
 builder.Services.AddDbContext<ApplicationDbContext>(option =>
     option.UseSqlServer(builder.Configuration.GetConnectionString("SqlServerCon")));
+
+// adding retry options 
+builder.Services.Configure<RetryPolicyOptions>(builder.Configuration.GetSection("RetryPolicy"));
 
 var app = builder.Build();
 

@@ -1,5 +1,7 @@
 using System.Reflection;
 using EntityDataApi.Data;
+using EntityDataApi.Helpers;
+using EntityDataApi.IRepositories;
 using EntityDataApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -12,116 +14,73 @@ namespace EntityDataApi.Controllers
     public class EntityController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IEntitiesRepository _entityRepo;
         private readonly ILogger<EntityController> _logger;
+        private readonly RetryHelper _retryHelper;
+
         private const int MaxRetryAttempts = 3;
-        private const int DelayBetweenRetriesMilliseconds = 10000;
         private const double BackoffMultiplier = 2.0; // For exponential backoff
+        private readonly TimeSpan MaxDelay = TimeSpan.FromMilliseconds(10000);
+        private readonly TimeSpan InitialDelay = TimeSpan.FromSeconds(1);
 
 
-        public EntityController(ApplicationDbContext context, ILogger<EntityController> logger)
+        public EntityController(ApplicationDbContext context, ILogger<EntityController> logger, IEntitiesRepository entityRepo, RetryHelper retryHelper)
         {
             _context = context;
             _logger = logger;
+            _entityRepo = entityRepo;
+            _retryHelper = retryHelper;
         }
+
+        // TODO: Has error
         #region GetAll
         [HttpGet]
-        // TODO: move those to an object
-        public ActionResult<IEnumerable<Entity>> GetEntities(
-                                                    [FromQuery] string? search = null,
-                                                    [FromQuery] string? gender = null,
-                                                    [FromQuery] string? country = null,
-                                                    [FromQuery] string? addressLine = null,
-                                                    [FromQuery] DateTime? startDate = null,
-                                                    [FromQuery] DateTime? endDate = null,
-                                                    [FromQuery] string sortBy = "Id",
-                                                    [FromQuery] string sortDirection = "asc",
-                                                    [FromQuery] int page = 1,
-                                                    [FromQuery] int pageSize = 10)
+        public async Task<ActionResult<IEnumerable<Entity>>> GetEntities([FromQuery] SearchFilterPagnationParameters parameters)
         {
-            IQueryable<Entity> query = _context.Entities
-                                                .Include(e => e.Addresses)
-                                                .Include(e => e.Names)
-                                                .Include(e => e.Dates);
-
-            // search filter if search is provided
-            if (!string.IsNullOrEmpty(search))
+            try
             {
+                var query = await _entityRepo.GetAllEntites(parameters);
 
-                query = query.Where(e => e.Id.ToString() == search ||
-                                          e.Names.Any(n => n.FirstName.Contains(search) || n.Surname.Contains(search)) ||
-                                          e.Addresses.Any(a => a.Country.Contains(search) || a.AddressLine.Contains(search)));
+                // Add pagination meta date to the response
+                var totalCount = query.Count;
+                var totalPages = (int)Math.Ceiling((double)totalCount / parameters.PageSize);
+                var metadata = new
+                {
+                    TotalCount = totalCount,
+                    PageSize = parameters.PageSize,
+                    CurrentPage = parameters.Page,
+                    TotalPages = totalPages
+                };
+                Response.Headers.Add("X-Pagination", Newtonsoft.Json.JsonConvert.SerializeObject(metadata));
+
+                return Ok(query);
             }
-
-            // gender filter if gender is provided
-            if (!string.IsNullOrEmpty(gender))
+            catch (Exception ex)
             {
-                query = query.Where(e => e.Gender == gender);
+                _logger.LogError(ex, "An error occurred while retrieving entities.");
+                return StatusCode(500, "An error occurred while retrieving entities.");
             }
-
-            // address country filter if country is provided
-            if (!string.IsNullOrEmpty(country))
-            {
-                query = query.Where(e => e.Addresses.Any(a => a.Country.Contains(country)));
-            }
-
-            // address line filter if addressLine is provided
-            if (!string.IsNullOrEmpty(addressLine))
-            {
-                query = query.Where(e => e.Addresses.Any(a => a.AddressLine.Contains(addressLine)));
-            }
-            if (startDate != null && endDate != null)
-            {
-                DateTime start = startDate.Value.Date;
-                DateTime end = endDate.Value.Date
-                                            .AddDays(1)
-                                            .AddTicks(-1); // Set the end date to 23:59:59.999 because end data is inclusive
-
-                query = query.Where(e => e.Dates.Any(d => d.DateValue >= start && d.DateValue <= end));
-            }
-
-            // sorting
-            var propertyInfo = typeof(Entity).GetProperty(sortBy, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-            if (propertyInfo != null)
-            {
-                query = sortDirection.ToLower() == "desc" ?
-                    query.OrderByDescending(x => EF.Property<object>(x, sortBy)) :
-                    query.OrderBy(x => EF.Property<object>(x, sortBy));
-            }
-
-
-            // Add pagination and paganition meta date to the response
-            var totalCount = query.Count();
-            var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
-            var entities = query.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-
-            var metadata = new
-            {
-                TotalCount = totalCount,
-                PageSize = pageSize,
-                CurrentPage = page,
-                TotalPages = totalPages
-            };
-
-            Response.Headers.Add("X-Pagination", Newtonsoft.Json.JsonConvert.SerializeObject(metadata));
-
-            return Ok(query);
         }
         #endregion
 
         #region GetById
         [HttpGet("{id}")]
-        public ActionResult<Entity> GetEntity(int id)
+        public async Task<ActionResult<Entity>> GetEntity(int id)
         {
-            var entity = _context.Entities
-                .Include(e => e.Addresses)
-                .Include(e => e.Dates)
-                .Include(e => e.Names)
-                .FirstOrDefault(e => e.Id == id);
-            if (entity == null)
+            try
             {
-                return NotFound();
+                var entity = await _entityRepo.GetEntityAsync(id);
+                if (entity == null)
+                {
+                    return NotFound();
+                }
+                return Ok(entity);
             }
-            return Ok(entity);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving the entity.");
+                return StatusCode(500, "An error occurred while retrieving the entity.");
+            }
         }
         #endregion
 
@@ -129,75 +88,78 @@ namespace EntityDataApi.Controllers
         [HttpPost]
         public async Task<ActionResult<Entity>> CreateEntity(Entity entity)
         {
-            int retryCount = 0;
-
-            while (retryCount < MaxRetryAttempts)
+            try
             {
-                try
+                // create the entity with retry and back off 
+                var newEntity = await _retryHelper.RetryWithBackoffAsync(async () =>
                 {
-                    _context.Entities.Add(entity);
-                    await _context.SaveChangesAsync();
-                    return CreatedAtAction(nameof(GetEntity), new { id = entity.Id }, entity);
-                }
-                catch (DbUpdateException ex) when (IsTransientError(ex) && retryCount < MaxRetryAttempts)
-                {
-                    retryCount++;
-                    TimeSpan delay = CalculateBackoffDelay(retryCount);
-                    _logger.LogWarning($"Transient error occurred while saving entity. Retrying attempt {retryCount} after {delay.TotalMilliseconds} milliseconds.");
-                    await Task.Delay(delay);
-                }
+                    return await _entityRepo.AddEntityAsync(entity);
+                });
+
+                return CreatedAtAction(nameof(GetEntity), new { id = newEntity.Id }, newEntity);
             }
-
-            _logger.LogError($"Failed to save entity after {MaxRetryAttempts} retry attempts.");
-            return StatusCode(500, "Failed to save entity after retry attempts.");
-        }
-
-        private TimeSpan CalculateBackoffDelay(int retryCount)
-        {
-            // Calculate exponential backoff delay with jitter
-            Random random = new Random();
-            int jitter = random.Next(0, 100); 
-            double exponentialDelay = Math.Min(DelayBetweenRetriesMilliseconds, Math.Pow(BackoffMultiplier, retryCount) * 1000);
-            return TimeSpan.FromMilliseconds(exponentialDelay + jitter);
-        }
-
-        private bool IsTransientError(DbUpdateException ex)
-        {
-            // Check if the exception is a transient error that can be retried
-            return ex.InnerException is SqlException sqlException && (sqlException.Number == -2 || sqlException.Number == 1205);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while creating the entity.");
+                return StatusCode(500, "An error occurred while creating the entity.");
+            }
         }
         #endregion
 
         #region put
         [HttpPut("{id}")]
-        public IActionResult PutEntity(int id, Entity entity)
+        public async Task<IActionResult> PutEntity(int id, Entity entity)
         {
             if (id != entity.Id)
             {
-                return BadRequest();
+                return BadRequest("Entity ID in the request body does not match the ID in the URL.");
             }
 
-            _context.Entry(entity).State = EntityState.Modified;
-            _context.SaveChanges();
+            try
+            {
+                var existingEntity = await _entityRepo.GetEntityAsync(id);
+                if (existingEntity == null)
+                {
+                    return NotFound("Entity not found.");
+                }
 
-            return NoContent();
+                var newEntity = await _retryHelper.RetryWithBackoffAsync(async () =>
+                {
+                    return await _entityRepo.UpdateEntityAsync(entity);
+                });
+
+                return CreatedAtAction(nameof(GetEntity), new { id = newEntity.Id }, newEntity);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while updating the entity.");
+                return StatusCode(500, "An error occurred while updating the entity.");
+            }
         }
         #endregion
 
         #region Delete
         [HttpDelete("{id}")]
-        public IActionResult DeleteEntity(string id)
+        public async Task<IActionResult> DeleteEntity(int id)
         {
-            var entity = _context.Entities.Find(id);
-            if (entity == null)
-            {
-                return NotFound();
+            try
+            { 
+                var result = await _retryHelper.RetryWithBackoffAsync(async () =>
+                {
+                    return await _entityRepo.DeleteEntityAsync(id);
+                });
+                if (!result)
+                {
+                    return NotFound("Entity not found.");
+                }
+
+                return NoContent();
             }
-
-            _context.Entities.Remove(entity);
-            _context.SaveChanges();
-
-            return NoContent();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while deleting the entity.");
+                return StatusCode(500, "An error occurred while deleting the entity.");
+            }
         }
         #endregion
     }
