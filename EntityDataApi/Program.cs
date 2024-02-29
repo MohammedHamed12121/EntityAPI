@@ -16,9 +16,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IEntitiesRepository, EntitiesRepository>();
 builder.Services.AddScoped<RetryHelper>();
 
-// Sqlite
-// builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
 // SqlServer
 builder.Services.AddDbContext<ApplicationDbContext>(option =>

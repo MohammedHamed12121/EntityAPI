@@ -1,11 +1,8 @@
-using System.Reflection;
 using EntityDataApi.Data;
 using EntityDataApi.Helpers;
 using EntityDataApi.IRepositories;
 using EntityDataApi.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 
 namespace EntityDataApi.Controllers
 {
@@ -13,20 +10,12 @@ namespace EntityDataApi.Controllers
     [Route("api/[controller]")]
     public class EntityController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IEntitiesRepository _entityRepo;
+       private readonly IEntitiesRepository _entityRepo;
         private readonly ILogger<EntityController> _logger;
         private readonly RetryHelper _retryHelper;
 
-        private const int MaxRetryAttempts = 3;
-        private const double BackoffMultiplier = 2.0; // For exponential backoff
-        private readonly TimeSpan MaxDelay = TimeSpan.FromMilliseconds(10000);
-        private readonly TimeSpan InitialDelay = TimeSpan.FromSeconds(1);
-
-
-        public EntityController(ApplicationDbContext context, ILogger<EntityController> logger, IEntitiesRepository entityRepo, RetryHelper retryHelper)
+        public EntityController(ILogger<EntityController> logger, IEntitiesRepository entityRepo, RetryHelper retryHelper)
         {
-            _context = context;
             _logger = logger;
             _entityRepo = entityRepo;
             _retryHelper = retryHelper;
