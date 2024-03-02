@@ -13,6 +13,7 @@ namespace EntityDataApi.Data
         public DbSet<Address> Addresses { get; set; }
         public DbSet<Date> Dates { get; set; }
         public DbSet<Name> Names { get; set; }
+        public DbSet<User> Users { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

@@ -3,7 +3,6 @@ using System;
 using EntityDataApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -20,111 +19,120 @@ namespace EntityDataApi.Data.Migrations
                 .HasAnnotation("ProductVersion", "7.0.11")
                 .HasAnnotation("Proxies:ChangeTracking", false)
                 .HasAnnotation("Proxies:CheckEquality", false)
-                .HasAnnotation("Proxies:LazyLoading", true)
-                .HasAnnotation("Relational:MaxIdentifierLength", 128)
-                .HasAnnotation("SqlServer:IdentityIncrement", 1)
-                .HasAnnotation("SqlServer:IdentitySeed", 1L)
-                .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                .HasAnnotation("Proxies:LazyLoading", true);
 
             modelBuilder.Entity("EntityDataApi.Models.Address", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
-                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("AddressLine")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("City")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Country")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("EntityId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EntityId");
 
-                    b.ToTable("Addresses", (string)null);
+                    b.ToTable("Addresses");
                 });
 
             modelBuilder.Entity("EntityDataApi.Models.Date", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
-                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("DateType")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DateValue")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("EntityId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EntityId");
 
-                    b.ToTable("Dates", (string)null);
+                    b.ToTable("Dates");
                 });
 
             modelBuilder.Entity("EntityDataApi.Models.Entity", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
-                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("Deceased")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Gender")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Entities", (string)null);
+                    b.ToTable("Entities");
                 });
 
             modelBuilder.Entity("EntityDataApi.Models.Name", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("SqlServer:IdentityIncrement", 1)
-                        .HasAnnotation("SqlServer:IdentitySeed", 1L)
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("EntityId")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("FirstName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("MiddleName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Surname")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EntityId");
 
-                    b.ToTable("Names", (string)null);
+                    b.ToTable("Names");
+                });
+
+            modelBuilder.Entity("EntityDataApi.Models.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FullName")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("EntityDataApi.Models.Address", b =>

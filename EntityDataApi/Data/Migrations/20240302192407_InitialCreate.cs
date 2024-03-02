@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace EntityDataApi.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class InitailSqlServerMigrations : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,10 +15,10 @@ namespace EntityDataApi.Data.Migrations
                 name: "Entities",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Deceased = table.Column<bool>(type: "bit", nullable: false),
-                    Gender = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Deceased = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Gender = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -26,15 +26,30 @@ namespace EntityDataApi.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Users",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Username = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    PasswordHash = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    FullName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Users", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Addresses",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    AddressLine = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    City = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Country = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    EntityId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    AddressLine = table.Column<string>(type: "TEXT", nullable: true),
+                    City = table.Column<string>(type: "TEXT", nullable: true),
+                    Country = table.Column<string>(type: "TEXT", nullable: true),
+                    EntityId = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -51,11 +66,11 @@ namespace EntityDataApi.Data.Migrations
                 name: "Dates",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    DateType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DateValue = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    EntityId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    DateType = table.Column<string>(type: "TEXT", nullable: true),
+                    DateValue = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    EntityId = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -72,12 +87,12 @@ namespace EntityDataApi.Data.Migrations
                 name: "Names",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    MiddleName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Surname = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    EntityId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    FirstName = table.Column<string>(type: "TEXT", nullable: true),
+                    MiddleName = table.Column<string>(type: "TEXT", nullable: true),
+                    Surname = table.Column<string>(type: "TEXT", nullable: true),
+                    EntityId = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -117,6 +132,9 @@ namespace EntityDataApi.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "Names");
+
+            migrationBuilder.DropTable(
+                name: "Users");
 
             migrationBuilder.DropTable(
                 name: "Entities");

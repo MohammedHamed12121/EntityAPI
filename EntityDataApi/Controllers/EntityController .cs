@@ -2,10 +2,12 @@ using EntityDataApi.Data;
 using EntityDataApi.Helpers;
 using EntityDataApi.IRepositories;
 using EntityDataApi.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EntityDataApi.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class EntityController : ControllerBase
@@ -21,7 +23,6 @@ namespace EntityDataApi.Controllers
             _retryHelper = retryHelper;
         }
 
-        // TODO: Has error
         #region GetAll
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Entity>>> GetEntities([FromQuery] SearchFilterPagnationParameters parameters)
