@@ -89,6 +89,54 @@ This API provides endpoints for managing entities in a system. Entities represen
     - Header: Contains `X-Pagination` with value of `{"TotalCount":8,"PageSize":10,"CurrentPage":1,"TotalPages":1}`
     - Body: Array of filtered entity objects
 
+Sure, here's the section formatted in Markdown:
+
+## Authentication
+
+### JSON Web Token (JWT) Authentication
+
+The API utilizes JSON Web Tokens (JWT) for authentication. JWT is a compact, URL-safe means of representing claims to be transferred between two parties. It is commonly used for securing API endpoints by providing a stateless authentication mechanism.
+
+#### Obtaining a JWT Token
+You need to register a new user through `/Authenticate` endpoint once done you can obtain a JWT token by sending a POST request to the `/Authenticate/login` endpoint with valid credentials. Upon successful authentication, the server will respond with a JWT token in the response body.
+
+##### Example Request:
+
+```http
+POST /auth/login HTTP/1.1
+Content-Type: application/json
+
+{
+    "username": "example_user",
+    "password": "example_password"
+}
+```
+
+##### Example Response:
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+{
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJleGFtcGxlX3VzZXIiLCJleHAiOjE2NDkzOTkxOTYsImlzcyI6Imh0dHBzOi8vYXV0aC5leGFtcGxlLmNvbSIsImlhdCI6MTY0OTM5NTU5Nn0.T2O2C1hIzZ9-2nY7Xe91gL5VIZr-LGj48sdPdqzO8P8"
+}
+```
+
+#### Using the JWT Token
+
+Once a JWT token is obtained, clients must include it in the `Authorization` header of subsequent requests to access protected endpoints. The token should be prefixed with the word "Bearer" followed by a space.
+
+##### Example Request:
+
+```http
+GET /api/entity HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJleGFtcGxlX3VzZXIiLCJleHAiOjE2NDkzOTkxOTYsImlzcyI6Imh0dHBzOi8vYXV0aC5leGFtcGxlLmNvbSIsImlhdCI6MTY0OTM5NTU5Nn0.T2O2C1hIzZ9-2nY7Xe91gL5VIZr-LGj48sdPdqzO8P8
+```
+
+#### Token Expiration
+
+JWT tokens issued by the API have a limited lifespan and will expire after a certain period. Clients should be prepared to handle token expiration by refreshing tokens or re-authenticating when necessary.    
+
 ## Error Handling
 
 The API returns appropriate HTTP status codes and error messages with the help of `try-catch` and `ILogger` to indicate the failure of each request. Common error scenarios include invalid request parameters, missing required fields, and entity not found and Transient error.
