@@ -18,15 +18,19 @@ namespace EntityDataApi.MiddleWares
 
         public async Task Invoke(HttpContext context)
         {
-            if (!context.User.Identity.IsAuthenticated)
+            if (!context.Request.Path.StartsWithSegments("/api/Authenticate"))
             {
-                _logger.LogWarning("User is not authenticated. Authentication is required to access this endpoint.");
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                context.Response.Headers.Add("X-Register-Required", "true"); 
-                await context.Response.WriteAsync("Authentication is required to access this endpoint. Please authenticate.");
-                return;
-            }
 
+                if (!context.User.Identity.IsAuthenticated)
+                {
+                    _logger.LogWarning("User is not authenticated. Authentication is required to access this endpoint.");
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    context.Response.Headers.Add("X-Register-Required", "true");
+                    await context.Response.WriteAsync("Authentication is required to access this endpoint. Please authenticate.");
+                    return;
+                }
+
+            }
             await _next(context);
         }
     }

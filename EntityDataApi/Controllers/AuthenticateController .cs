@@ -1,6 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.Tasks;
 using EntityDataApi.Data;
 using EntityDataApi.Models;
 using EntityDataApi.ViewModels;
@@ -11,14 +15,15 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace EntityDataApi.Controllers
 {
+    [AllowAnonymous]
     [ApiController]
     [Route("api/[controller]")]
-    public class RegisterController  : ControllerBase
+    public class AuthenticateController  : ControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
 
-        public RegisterController(ApplicationDbContext context, IConfiguration configuration)
+        public AuthenticateController(ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
             _configuration = configuration;
@@ -51,11 +56,7 @@ namespace EntityDataApi.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            // Generate JWT token
-            var token = GenerateJwtToken(user.Id.ToString(), "user");
-
-            // Return JWT token as response
-            return Ok(new { token });
+            return Ok(new Response { Status = "Success", Message = "User created successfully!" });
         }
         #endregion
 
@@ -72,17 +73,34 @@ namespace EntityDataApi.Controllers
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username);
 
             // Check if user exists and verify the password
-            if (user == null || !VerifyPassword(model.Password, user.PasswordHash))
+            // if (user == null || !VerifyPassword(model.Password, user.PasswordHash))
+            // {
+            //     return Unauthorized("Invalid username or password");
+            // }
+            if (user == null )
             {
-                return Unauthorized("Invalid username or password");
+                return Unauthorized("There is no user exist with this name");
+            }
+            if (!VerifyPassword(model.Password, user.PasswordHash))
+            {
+                return Unauthorized("Wrong Password, Try type it again or check if you forget it");
             }
 
-            // Generate JWT token
-            var token = GenerateJwtToken(user.Id.ToString(), "user");
-            
+            var authClaims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                };
 
-            // Return JWT token as response
-            return Ok(new { token });
+            
+            // Generate JWT token
+            var token = GetToken(authClaims);
+            
+            return Ok(new
+                {
+                    token = new JwtSecurityTokenHandler().WriteToken(token),
+                    expiration = token.ValidTo
+                });
         }
         #endregion
 
@@ -93,26 +111,21 @@ namespace EntityDataApi.Controllers
             return Convert.ToBase64String(hashedBytes);
         }
 
-        private string GenerateJwtToken(string userId, string userRole)
+        private JwtSecurityToken GetToken(List<Claim> authClaims)
         {
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Issuer"],
-                claims: new[]
-                {
-                    new Claim(ClaimTypes.NameIdentifier, userId),
-                    new Claim(ClaimTypes.Role, userRole)
-                },
-                expires: DateTime.Now.AddMinutes(30), 
-                signingCredentials: creds
-            );
+                issuer: _configuration["JWT:ValidIssuer"],
+                audience: _configuration["JWT:ValidAudience"],
+                expires: DateTime.Now.AddHours(3),
+                claims: authClaims,
+                signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+                );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return token;
         }
-
+        
         private bool VerifyPassword(string password, string hashedPassword)
         {
             return hashedPassword == HashPassword(password);
