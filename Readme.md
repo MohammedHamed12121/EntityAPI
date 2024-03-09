@@ -149,6 +149,17 @@ To balance between system stability, user experience, and effective handling of 
 This done through `RetryHelper` which takes the action and try to applied on the database, and if it fails it apply the mechanism form a number of tries.
 This helper has options configured through `program.cs` and is stored in `appsittings.json`
 
+
+## Rate Limiting
+
+The API implements rate limiting to ensure fair usage and prevent abuse. Rate limiting restricts the number of requests that a client can make within a specified time frame. This helps maintain API stability and prevents server overload.
+
+### Rate Limiting Configuration
+
+The rate limiting rules are configured as follows:
+
+- **Limit**: Specifies the maximum number of requests allowed within a given period.
+- **Period**: Defines the duration over which the limit applies.
 ## Conclusion
 
 This documentation provides an overview of the endpoints, request parameters, and response formats supported by the API. You can found the api source code on https://github.com/MohammedHamed12121/EntityAPI/tree/main
